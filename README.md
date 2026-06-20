@@ -1,4 +1,4 @@
-# Routerich: Настройка AmneziaWG и youtubeUnblock
+## Routerich: Настройка AmneziaWG и youtubeUnblock
 
 Настраиваем на **[Routerich AX3000](https://routerich.ru/products/ax3000)** две WiFi-сети с разными способами обхода блокировок, чтобы не устанавливать VPN-клиенты на каждое устройство.
 
