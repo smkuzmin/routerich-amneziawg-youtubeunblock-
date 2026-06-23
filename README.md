@@ -273,7 +273,7 @@ reboot
 5. Подключитесь к `WiFi 5 GHz` (**Routerich_5**) или `LAN`
 6. Проверьте IP-адрес - должен быть: `192.168.1.x`
 7. Откройте [ifconfig.me](https://ifconfig.me) - должен быть IP вашего провайдера
-8. Проверьте работу **[YouTube](https://www.youtube.com/)**
+8. Проверьте работу **Telegram** и **[YouTube](https://www.youtube.com/)**
 
 ***
 
