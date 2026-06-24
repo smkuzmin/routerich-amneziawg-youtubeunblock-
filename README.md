@@ -288,7 +288,7 @@ reboot
 2. Скопируйте команды ниже и вставьте в окно терминала:
 ```bash
 sh << 'SCRIPT'
-check(){ local r; [ "$(eval "$2")" ] && r="32m[+]" || r="31m[-]"; printf "\033[1;%s\033[0m %s\n" "$r" "$1"; }
+check(){ local r; [ "$(eval "$2" 2>/dev/null)" ] && r="32m[+]" || r="31m[-]"; printf "\033[1;%s\033[0m %s\n" "$r" "$1"; }
 check "youtubeUnblock: служба запущена"                          "/etc/init.d/youtubeUnblock status | grep 'running'"
 check "youtubeUnblock: пакет для Web-интерфейса установлен"      "opkg list-installed | grep luci-app-youtubeUnblock"
 check "Интерфейс: awg0 активен"                                  "awg show awg0 | grep 'latest handshake' | grep -v 'never'"
