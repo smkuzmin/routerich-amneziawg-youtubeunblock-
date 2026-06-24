@@ -63,10 +63,18 @@
 # 1. Устанавливаем пакет Web-интерфейса для youtubeUnblock
 # Система -> Пакеты -> Действия: Обновить списки.. -> Закрыть
 # Загрузить и установить пакет: luci-app-youtubeUnblock -> OK -> Установить -> Закрыть
-opkg update
-opkg install luci-app-youtubeUnblock
+for i in $(seq 1 10); do
+  opkg list-installed | grep -q luci-app-youtubeUnblock && break
+  echo "[ Установка luci-app-youtubeUnblock: попытка $i из 10 ]"
+  opkg update -V0 && opkg install luci-app-youtubeUnblock
+done
 
-# 2. Добавляем интерфейс awg0 в зону wan
+# 2. Включаем youtubeUnblock для автозапуска
+# Система -> Автозапуск -> youtubeUnblock -> Включено
+/etc/init.d/youtubeUnblock enable
+
+
+# 3. Добавляем интерфейс awg0 в зону wan
 # Сеть -> Межсетевой экран -> Зоны -> wan -> Изменить
 # Охватываемые сети: добавить awg0 -> Сохранить -> Применить
 for z in $(uci show firewall | grep '@zone' | grep "name='wan'" | cut -d. -f2 | cut -d= -f1); do
@@ -74,7 +82,7 @@ for z in $(uci show firewall | grep '@zone' | grep "name='wan'" | cut -d. -f2 | 
   uci add_list firewall.$z.network='awg0'
 done
 
-# 3. Создаем бридж br-wifi24
+# 4. Создаем бридж br-wifi24
 # Сеть -> Интерфейсы -> Устройства -> Добавить конфигурацию устройства..
 # На вкладке Общие опции устройства:
 #   - Тип устройства: Мост
@@ -84,7 +92,7 @@ uci set network.br_wifi24='device'
 uci set network.br_wifi24.type='bridge'
 uci set network.br_wifi24.name='br-wifi24'
 
-# 4. Создаем интерфейс wifi24 и добавляем его в бридж
+# 5. Создаем интерфейс wifi24 и добавляем его в бридж
 # Сеть -> Интерфейсы -> Добавить новый интерфейс..
 #   - Имя: wifi24
 #   - Протокол: Статический адрес
@@ -103,11 +111,11 @@ uci set network.wifi24.ipaddr='192.168.2.1'
 uci set network.wifi24.netmask='255.255.255.0'
 uci set network.wifi24.dns='1.1.1.1 8.8.8.8'
 
-# 5. Привязываем WiFi 2.4 GHz к интерфейсу wifi24
+# 6. Привязываем WiFi 2.4 GHz к интерфейсу wifi24
 # Сеть -> Беспроводная сеть -> SSID: RouteRich_2 -> Изменить -> Настройка сети -> Сеть: заменяем lan на wifi24 -> Сохранить -> Применить
 uci set wireless.default_radio0.network='wifi24'
 
-# 6. Создаем зону Firewall для интерфейса wifi24
+# 7. Создаем зону Firewall для интерфейса wifi24
 # Сеть -> Межсетевой экран -> Зоны -> Добавить
 # На вкладке Основные настройки:
 #   - Имя: wifi24
@@ -130,7 +138,7 @@ uci set firewall.wifi24.masq='1'
 uci set firewall.wifi24.mtu_fix='1'
 uci set firewall.wifi24.network='wifi24'
 
-# 7. Разрешаем forward между зонами
+# 8. Разрешаем forward между зонами
 # Сеть -> Межсетевой экран -> Зоны -> wifi24 -> Изменить
 # На вкладке Основные настройки:
 #   - Разрешить перенаправление в зоны назначения: wan
@@ -146,14 +154,14 @@ uci add firewall forwarding
 uci set firewall.@forwarding[-1].src='wan'
 uci set firewall.@forwarding[-1].dest='wifi24'
 
-# 8. Привязываем интерфейс wifi24 к таблице 100
+# 9. Привязываем интерфейс wifi24 к таблице 100
 # Сеть -> Интерфейсы -> wifi24 -> Изменить
 # На вкладке Расширенные настройки:
 #   - Переопределить таблицу маршрутизации IPv4: 100
 # Сохранить -> Применить
 uci set network.wifi24.rtable='100'
 
-# 9. Настраиваем DHCP-сервер для интерфейса wifi24
+# 10. Настраиваем DHCP-сервер для интерфейса wifi24
 # Сеть -> Интерфейсы -> wifi24 -> Изменить
 # На вкладке DHCP-сервер:
 #   - [x] Настроить DHCP-сервер:
@@ -164,12 +172,12 @@ uci set dhcp.wifi24.start='100'
 uci set dhcp.wifi24.limit='150'
 uci set dhcp.wifi24.leasetime='12h'
 
-# 10. Удаляем все старые маршруты через AWG и правила для 192.168.2.0/24
+# 11. Удаляем все старые маршруты через AWG и правила для 192.168.2.0/24
 # Сеть -> Маршрутизация -> удаляем вручную соответствующие записи
 uci show network | grep "@route" | grep "awg0"           | cut -d. -f2 | while read r; do uci delete network.$r >/dev/null 2>&1; done
 uci show network | grep "@rule"  | grep "192.168.2.0/24" | cut -d. -f2 | while read r; do uci delete network.$r >/dev/null 2>&1; done
 
-# 11. Добавляем маршрут по умолчанию через интерфейс awg0 в таблице 100
+# 12. Добавляем маршрут по умолчанию через интерфейс awg0 в таблице 100
 # Сеть -> Маршрутизация
 # На вкладке Статические маршруты IPv4:
 #   - Добавить:
@@ -183,7 +191,7 @@ uci set network.@route[-1].interface='awg0'
 uci set network.@route[-1].target="0.0.0.0/0"
 uci set network.@route[-1].table='100'
 
-# 12. Добавляем локальный маршрут через интерфейс wifi24 в таблице 100
+# 13. Добавляем локальный маршрут через интерфейс wifi24 в таблице 100
 # Сеть -> Маршрутизация
 # На вкладке Статические маршруты IPv4:
 #   - Добавить:
@@ -197,7 +205,7 @@ uci set network.@route[-1].interface='wifi24'
 uci set network.@route[-1].target="192.168.2.0/24"
 uci set network.@route[-1].table='100'
 
-# 13. Добавляем маршруты Telegram через интерфейс awg0 в основной таблице
+# 14. Добавляем маршруты Telegram через интерфейс awg0 в основной таблице
 # Сеть -> Маршрутизация -> Статические маршруты IPv4
 # На вкладке Статические маршруты IPv4:
 #   - Добавить
@@ -210,7 +218,7 @@ for net in 91.105.192.0/23 91.108.4.0/22 91.108.8.0/21 91.108.16.0/21 91.108.56.
   uci set network.@route[-1].target="$net"
 done
 
-# 14. Создаем правило маршрутизации: трафик из 192.168.2.0/24 -> таблица 100
+# 15. Создаем правило маршрутизации: трафик из 192.168.2.0/24 -> таблица 100
 # На вкладке Правила IPv4:
 #   - Добавить:
 #   На вкладке Основные настройки:
@@ -222,7 +230,7 @@ uci add network rule
 uci set network.@rule[-1].src='192.168.2.0/24'
 uci set network.@rule[-1].lookup='100'
 
-# 15. Сохраняем все изменения
+# 16. Сохраняем все изменения
 # Сеть -> Интерфейсы -> Применить
 # Сеть -> Маршрутизация -> Применить
 # Сеть -> Межсетевой экран -> Применить
@@ -232,10 +240,6 @@ uci commit network
 uci commit firewall
 uci commit wireless
 uci commit dhcp
-
-# 16. Включаем youtubeUnblock для автозапуска
-# Система -> Автозапуск -> youtubeUnblock -> Включено
-/etc/init.d/youtubeUnblock enable
 
 # 17. Перезапускаем Firewall, чтобы создать цепочку youtubeUnblock
 /etc/init.d/firewall restart
@@ -286,16 +290,18 @@ reboot
 ```bash
 sh << 'SCRIPT'
 check(){ local out=$(eval "$2" 2>/dev/null); local r="-"; [ "$out" ] && r="+"; printf "[%s] %s\n" "$r" "$1"; }
-check "WiFi 2.4 привязан к интерфейсу wifi24" "uci get wireless.default_radio0.network"
-check "Интерфейс br-wifi24 поднят" "ip addr show br-wifi24 2>/dev/null | grep 'inet '"
-check "DHCP раздаёт адреса в 192.168.2.x" "awk '\$3 ~ /^192\\.168\\.2\\./ {print \$3, \$4}' /tmp/dhcp.leases"
-check "Правило маршрутизации существует" "ip rule show | grep '192.168.2.0/24'"
-check "В таблице 100 есть маршрут по умолчанию через awg0" "ip route show table 100 | grep 'default dev awg0'"
-check "В таблице 100 есть локальный маршрут" "ip route show table 100 | grep '192.168.2.0/24 dev br-wifi24'"
-check "Firewall-зона wifi24 существует" "uci get firewall.wifi24.network"
-check "AWG-туннель активен" "awg show | grep 'latest handshake'"
-check "youtubeUnblock запущен" "/etc/init.d/youtubeUnblock status | grep 'running'"
-check "Правило skip_awg есть в цепочке" "nft list chain inet fw4 youtubeUnblock | grep 'skip_awg'"
-check "WiFi 2.4 GHz работает" "iwinfo | grep 'RouteRich_2'"
+check "youtubeUnblock: служба запущена"                          "/etc/init.d/youtubeUnblock status | grep 'running'"
+check "youtubeUnblock: пакет для Web-интерфейса установлен"      "opkg list-installed | grep luci-app-youtubeUnblock"
+check "Интерфейс: awg0 активен"                                  "awg show awg0 | grep 'latest handshake' | grep -v 'never'"
+check "Интерфейс: br-wifi24 активен"                             "ip addr show br-wifi24 | grep 'inet '"
+check "Firewall: зона wifi24 существует"                         "uci get firewall.wifi24.network | grep 'wifi24'"
+check "Firewall: правило skip_awg для youtubeUnblock существует" "nft list chain inet fw4 youtubeUnblock | grep 'skip_awg'"
+check "WiFi 2.4 GHz: привязан к интерфейсу wifi24"               "uci get wireless.default_radio0.network | grep 'wifi24'"
+check "WiFi 2.4 GHz: точка доступа активна"                      "iwinfo | grep 'Mode: Master .*2.4.* GHz'"
+check "WiFi 2.4 GHz: DHCP выдал адреса в 192.168.2.x"            "awk '\$3 ~ /^192\\.168\\.2\\./ {print \$3, \$4}' /tmp/dhcp.leases"
+check "Таблица 100: есть маршрут 0.0.0.0/0   -> awg0"            "ip route show table 100 | grep 'default dev awg0'"
+check "Таблица 100: есть маршрут 192.168.2.x -> br-wifi24"       "ip route show table 100 | grep '192.168.2.0/24 dev br-wifi24'"
+check "Таблица осн: есть правило 192.168.2.x -> таблица 100"     "ip rule show | grep 'from 192.168.2.0/24 lookup 100'"
 SCRIPT
 ```
+
