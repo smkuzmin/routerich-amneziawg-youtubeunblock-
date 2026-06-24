@@ -289,13 +289,13 @@ reboot
 ```bash
 sh << 'SCRIPT'
 check(){ r="31m[-]"; [ "$(eval "$2" 2>/dev/null)" ] && r="32m[+]"; printf "\033[1;%s\033[0m %s\n" "$r" "$1"; }
-check "youtubeUnblock: служба запущена"                          "/etc/init.d/youtubeUnblock status | grep 'running'"
+check "youtubeUnblock: служба запущена"                          "/etc/init.d/youtubeUnblock status | grep running"
 check "youtubeUnblock: пакет для Web-интерфейса установлен"      "opkg list-installed | grep luci-app-youtubeUnblock"
-check "Интерфейс: awg0 активен"                                  "awg show awg0 | grep 'latest handshake' | grep -v 'never'"
-check "Интерфейс: br-wifi24 активен"                             "ip addr show br-wifi24 | grep 'inet '"
-check "Firewall: зона wifi24 существует"                         "uci get firewall.wifi24.network | grep 'wifi24'"
-check "Firewall: правило skip_awg для youtubeUnblock существует" "nft list chain inet fw4 youtubeUnblock | grep 'skip_awg'"
-check "WiFi 2.4 GHz: привязан к интерфейсу wifi24"               "uci get wireless.default_radio0.network | grep 'wifi24'"
+check "Интерфейс: awg0 настроен и активен"                       "awg show awg0 | grep handshake | grep -v never"
+check "Интерфейс: br-wifi24 настроен и активен"                  "ip addr show br-wifi24 | grep 'inet 192.168.2.1/24 brd 192.168.2.255'"
+check "Firewall: зона wifi24 существует"                         "uci get firewall.wifi24.network | grep wifi24"
+check "Firewall: правило skip_awg для youtubeUnblock существует" "nft list chain inet fw4 youtubeUnblock | grep skip_awg"
+check "WiFi 2.4 GHz: привязан к интерфейсу wifi24"               "uci get wireless.default_radio0.network | grep wifi24"
 check "WiFi 2.4 GHz: точка доступа активна"                      "iwinfo | grep 'Mode: Master .*2.4.* GHz'"
 check "WiFi 2.4 GHz: DHCP выдал адреса в 192.168.2.x"            "awk '\$3 ~ /^192\\.168\\.2\\./ {print \$3, \$4}' /tmp/dhcp.leases"
 check "Таблица 100: есть маршрут 0.0.0.0/0   -> awg0"            "ip route show table 100 | grep 'default dev awg0'"
