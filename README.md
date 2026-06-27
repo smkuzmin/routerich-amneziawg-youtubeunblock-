@@ -24,23 +24,26 @@
 
 ## Шаг 1: Первоначальная настройка роутера
 
-Включите роутер, подключите кабель провайдера в порт `WAN`, а кабель от ПК в любой порт `LAN`. Затем откройте [Мастер настроек Routerich](http://192.168.1.1/luci-static/resources/wizard.html) (**Имя пользователя**: `root`, **Пароль**: *без пароля*) и пройдите все шаги мастера, заполняя соответствующие поля:
+Включите роутер, подключите кабель провайдера в порт `WAN`, а кабель от ПК в любой порт `LAN`.
+На ПК зайдите в Web-интерфейс роутера: [http://192.168.1.1](http://192.168.1.1) (**Имя пользователя**: `root`, **Пароль**: *без пароля*).
+Выполните сброс настроек: **Система** -> **Восстановление / Обновление** -> **Выполнить сброс**.
+Подождите - откроется **Мастер первоначальной настройки**. Пройдите все шаги, как указано:
 
 1. Интернет
    - **Протокол**: `PPPoE` (*обычно такой - смотрите свой договор на Интернет*)
    - **Имя пользователя**: *ваш логин из договора на Интернет*
    - **Пароль**: *ваш пароль из договора на Интернет*
-   - **DNS-серверы**: `77.88.8.8`, `77.88.8.1`
+   - **DNS-серверы**: `77.88.8.8`, `77.88.8.1` (**рекомендую эти, но можно не указывать или сменить на другие**)
    - **Включить IPv6**: `[ ]`
 2. Сеть
    - **IP-адрес роутера**: `192.168.1.1`
    - **Маска сети**: `255.255.255.0`
 3. WiFi
    - **Одинаковое имя для 2.4 и 5 ГГц**: `[ ]`
-   - **Сеть 2.4 ГГц**: `RouteRich_2`
-   - **Пароль**: `12345678`
-   - **Сеть 5 ГГц**: `RouteRich_5`
-   - **Пароль**: `12345678`
+   - **Сеть 2.4 ГГц**: `RouteRich_2` (*можете сменить*)
+   - **Пароль**: `12345678` (*можете сменить*)
+   - **Сеть 5 ГГц**: `RouteRich_5` (*можете сменить*)
+   - **Пароль**: `12345678` (*можете сменить*)
 4. Mesh
    - **Включить Mesh-сеть**: `[ ]`
 
@@ -69,11 +72,7 @@ for i in $(seq 1 10); do
   opkg update -V0 && opkg install luci-app-youtubeUnblock
 done
 
-# 2. Включаем youtubeUnblock для автозапуска
-# Система -> Автозапуск -> youtubeUnblock -> Включено
-/etc/init.d/youtubeUnblock enable
-
-# 3. Добавляем интерфейс awg0 в зону wan
+# 2. Добавляем интерфейс awg0 в зону wan
 # Сеть -> Межсетевой экран -> Зоны -> wan -> Изменить
 # Охватываемые сети: awg0: wan:
 # Сохранить -> Применить
@@ -82,7 +81,7 @@ uci show firewall | grep "@zone.*name='wan'" | cut -d. -f2 | sort -Vr | while re
   uci -q add_list firewall.$r.network='awg0'
 done
 
-# 4. Создаем бридж br-wifi24
+# 3. Создаем бридж br-wifi24
 # Сеть -> Интерфейсы -> Устройства -> Добавить конфигурацию устройства..
 # На вкладке Общие опции устройства:
 #   - Тип устройства: Мост
@@ -92,7 +91,7 @@ uci set network.br_wifi24='device'
 uci set network.br_wifi24.type='bridge'
 uci set network.br_wifi24.name='br-wifi24'
 
-# 5. Создаем интерфейс wifi24 и добавляем его в бридж br-wifi24
+# 4. Создаем интерфейс wifi24 и добавляем его в бридж br-wifi24
 # Сеть -> Интерфейсы -> Добавить новый интерфейс..
 #   - Имя: wifi24
 #   - Протокол: Статический адрес
@@ -111,14 +110,14 @@ uci set network.wifi24.ipaddr='192.168.2.1'
 uci set network.wifi24.netmask='255.255.255.0'
 uci set network.wifi24.dns='1.1.1.1 8.8.8.8'
 
-# 6. Привязываем WiFi 2.4 GHz к интерфейсу wifi24
+# 5. Привязываем WiFi 2.4 GHz к интерфейсу wifi24
 # Сеть -> Беспроводная сеть -> SSID: RouteRich_2 -> Изменить -> Настройка сети
 # На вкладке Основные настройки:
 #   - Сеть: wifi24
 # Сохранить -> Применить
 uci set wireless.default_radio0.network='wifi24'
 
-# 7. Добавляем зону Firewall для интерфейса wifi24
+# 6. Добавляем зону Firewall для интерфейса wifi24
 # Сеть -> Межсетевой экран -> Зоны -> Добавить
 # На вкладке Основные настройки:
 #   - Имя: wifi24
@@ -140,7 +139,7 @@ uci set firewall.wifi24.masq='1'
 uci set firewall.wifi24.mtu_fix='1'
 uci set firewall.wifi24.network='wifi24'
 
-# 8. Добавляем правила пересылки между зонами wifi24 и wan
+# 7. Добавляем правила пересылки между зонами wifi24 и wan
 # Сеть -> Межсетевой экран -> Зоны -> wifi24 -> Изменить
 # На вкладке Основные настройки:
 #   - Разрешить перенаправление в зоны назначения: wan
@@ -155,14 +154,14 @@ uci add firewall forwarding
 uci set firewall.@forwarding[-1].src='wan'
 uci set firewall.@forwarding[-1].dest='wifi24'
 
-# 9. Привязываем интерфейс wifi24 к таблице 100
+# 8. Привязываем интерфейс wifi24 к таблице 100
 # Сеть -> Интерфейсы -> wifi24 -> Изменить
 # На вкладке Расширенные настройки:
 #   - Переопределить таблицу маршрутизации IPv4: 100
 # Сохранить -> Применить
 uci set network.wifi24.rtable='100'
 
-# 10. Настраиваем DHCP-сервер для интерфейса wifi24
+# 9. Настраиваем DHCP-сервер для интерфейса wifi24
 # Сеть -> Интерфейсы -> wifi24 -> Изменить
 # На вкладке DHCP-сервер:
 #   - [x] Настроить DHCP-сервер:
@@ -175,7 +174,7 @@ uci set dhcp.wifi24.start='10'
 uci set dhcp.wifi24.limit='245'
 uci set dhcp.wifi24.leasetime='12h'
 
-# 11. Добавляем маршрут по умолчанию через интерфейс awg0 в таблице 100
+# 10. Добавляем маршрут по умолчанию через интерфейс awg0 в таблице 100
 # Сеть -> Маршрутизация
 # На вкладке Статические маршруты IPv4:
 #   - Добавить:
@@ -191,7 +190,7 @@ uci set network.@route[-1].interface='awg0'
 uci set network.@route[-1].target='0.0.0.0/0'
 uci set network.@route[-1].table='100'
 
-# 12. Добавляем маршрут в 192.168.2.0/24 через интерфейс wifi24 в таблице 100
+# 11. Добавляем маршрут в 192.168.2.0/24 через интерфейс wifi24 в таблице 100
 # Сеть -> Маршрутизация
 # На вкладке Статические маршруты IPv4:
 #   - Добавить:
@@ -207,7 +206,7 @@ uci set network.@route[-1].interface='wifi24'
 uci set network.@route[-1].target='192.168.2.0/24'
 uci set network.@route[-1].table='100'
 
-# 13. Добавляем маршруты к Telegram через интерфейс awg0 в таблице main
+# 12. Добавляем маршруты к Telegram через интерфейс awg0 в таблице main
 # Сеть -> Маршрутизация -> Статические маршруты IPv4
 # На вкладке Статические маршруты IPv4:
 #   - Добавить
@@ -223,7 +222,7 @@ for net in $telegram_nets; do
   uci set network.@route[-1].target="$net"
 done
 
-# 14. Создаем правило маршрутизации: трафик из 192.168.2.0/24 -> таблица 100
+# 13. Создаем правило маршрутизации: трафик из 192.168.2.0/24 -> таблица 100
 # На вкладке Правила IPv4:
 #   - Добавить:
 #   На вкладке Основные настройки:
@@ -237,7 +236,7 @@ uci add network rule
 uci set network.@rule[-1].src='192.168.2.0/24'
 uci set network.@rule[-1].lookup='100'
 
-# 15. Добавляем скрипт автозапуска для youtubeUnblock в rc.local
+# 14. Добавляем скрипт автозапуска для youtubeUnblock в rc.local
 # Система -> Автозапуск -> Запуск пакетов и служб пользователя, при включении устройства
 cat > /etc/rc.local << 'EOF'
 # Исключаем AWG-трафик из обработки youtubeUnblock
@@ -253,11 +252,11 @@ exit 0
 EOF
 chmod +x /etc/rc.local
 
-# 16. Заставляем службу Терминал слушать на всех интерфейсах вместо lan
+# 15. Заставляем службу Терминал слушать на всех интерфейсах вместо lan
 # Службы -> Терминал -> Конфигурация -> Интерфейс: не определено
 uci -q delete ttyd.@ttyd[0].interface
 
-# 17. Сохраняем все изменения
+# 16. Сохраняем все изменения
 # Сеть -> Интерфейсы -> Применить
 # Сеть -> Маршрутизация -> Применить
 # Сеть -> Межсетевой экран -> Применить
@@ -270,10 +269,11 @@ uci commit wireless
 uci commit dhcp
 uci commit ttyd
 
-# 18. Перезагружаемся
+# 17. Перезагружаемся
 # Система -> Перезагрузка -> Выполнить перезагрузку
 reboot
 ```
+3. После выполнения команд в терминале нажмите **Enter** для перезагрузки.
 
 ***
 
@@ -287,23 +287,30 @@ reboot
 ```bash
 sh << 'SCRIPT'
 check(){ r="31m[-]"; [ "$(eval "$2" 2>/dev/null)" ] && r="32m[+]"; printf "\033[1;%s\033[0m %s\n" "$r" "$1"; }
-check "Шаг 2: Настройка туннеля AmneziaWG"                                                "awg show awg0 | grep handshake | grep -v never"
+check "Шаг 1/1: IPv6 отключен"                                                            "uci show | grep \"wizard.default.ipv6='0'\""
+check "Шаг 1/2: IP-адрес роутера: 192.168.1.1"                                            "uci get network.lan.ipaddr | grep '192.168.1.1'"
+check "Шаг 1/2: Маска сети: 255.255.255.0"                                                "uci get network.lan.netmask | grep '255.255.255.0'"
+check "Шаг 1/3: Разные SSID для 2.4 и 5 ГГц"                                              "uci get wizard.default.unify_ssid | grep 0"
+check "Шаг 1/4: Mesh-сеть отключена"                                                      "uci show | grep \"mesh_enabled='0'\""
+check "Шаг 2/1: Интерфейс awg0 создан с протоколом AmneziaWG"                             "uci get network.awg0.proto | grep amneziawg"
+check "Шаг 2/2: Приватный ключ настроен"                                                  "uci get network.awg0.private_key | grep ."
+check "Шаг 2/2: Endpoint сервера настроен"                                                "uci show network | grep 'awg0.*endpoint_host'"
+check "Шаг 2/2: Туннель активен"                                                          "awg show awg0 | grep handshake | grep -v never"
 check "Шаг 3/1: Устанавливаем пакет Web-интерфейса для youtubeUnblock"                    "opkg list-installed | grep luci-app-youtubeUnblock"
-check "Шаг 3/2: Включаем youtubeUnblock для автозапуска"                                  "/etc/init.d/youtubeUnblock status | grep running"
-check "Шаг 3/3: Добавляем интерфейс awg0 в зону wan"                                      "uci show firewall | grep awg0"
-check "Шаг 3/4: Создаем бридж br-wifi24"                                                  "ip addr show br-wifi24 | grep 'inet 192.168.2.1/24 brd 192.168.2.255'"
-check "Шаг 3/5: Создаем интерфейс wifi24 и добавляем его в бридж br-wifi24"               "uci get network.wifi24.device | grep br-wifi24"
-check "Шаг 3/6: Привязываем WiFi 2.4 GHz к интерфейсу wifi24"                             "uci get wireless.default_radio0.network | grep wifi24"
-check "Шаг 3/7: Добавляем зону Firewall для интерфейса wifi24"                            "uci get firewall.wifi24.network | grep wifi24"
-check "Шаг 3/8: Добавляем правила пересылки между зонами wifi24 и wan"                    "uci show firewall | grep '@forwarding' | grep wifi24"
-check "Шаг 3/9: Привязываем интерфейс wifi24 к таблице 100"                               "uci get network.wifi24.rtable | grep 100"
-check "Шаг 3/10: Настраиваем DHCP-сервер для интерфейса wifi24"                           "uci get dhcp.wifi24.interface | grep wifi24"
-check "Шаг 3/11: Добавляем маршрут по умолчанию через интерфейс awg0 в таблице 100"       "ip route show table 100 | grep 'default dev awg0'"
-check "Шаг 3/12: Добавляем маршрут в 192.168.2.0/24 через интерфейс wifi24 в таблице 100" "ip route show table 100 | grep '192.168.2.0/24 dev br-wifi24'"
-check "Шаг 3/13: Добавляем маршруты к Telegram через awg0 в таблице main"                 "ip route show table main | grep awg0 | grep '91.105.192.0/23'"
-check "Шаг 3/14: Создаем правило маршрутизации: 192.168.2.0/24 -> таблица 100"            "ip rule show | grep 'from 192.168.2.0/24 lookup 100'"
-check "Шаг 3/15: Добавляем скрипт автозапуска для youtubeUnblock в rc.local"              "nft list chain inet fw4 youtubeUnblock | grep skip_awg"
-check "Шаг 3/16: Заставляем службу Терминал слушать на всех интерфейсах вместо lan"       "netstat -tlnp | grep ttyd | grep '0.0.0.0:7681'"
+check "Шаг 3/2: Добавляем интерфейс awg0 в зону wan"                                      "uci show firewall | grep awg0"
+check "Шаг 3/3: Создаем бридж br-wifi24"                                                  "ip addr show br-wifi24 | grep 'inet 192.168.2.1/24 brd 192.168.2.255'"
+check "Шаг 3/4: Создаем интерфейс wifi24 и добавляем его в бридж br-wifi24"               "uci get network.wifi24.device | grep br-wifi24"
+check "Шаг 3/5: Привязываем WiFi 2.4 GHz к интерфейсу wifi24"                             "uci get wireless.default_radio0.network | grep wifi24"
+check "Шаг 3/6: Добавляем зону Firewall для интерфейса wifi24"                            "uci get firewall.wifi24.network | grep wifi24"
+check "Шаг 3/7: Добавляем правила пересылки между зонами wifi24 и wan"                    "uci show firewall | grep '@forwarding' | grep wifi24"
+check "Шаг 3/8: Привязываем интерфейс wifi24 к таблице 100"                               "uci get network.wifi24.rtable | grep 100"
+check "Шаг 3/9: Настраиваем DHCP-сервер для интерфейса wifi24"                            "uci get dhcp.wifi24.interface | grep wifi24"
+check "Шаг 3/10: Добавляем маршрут по умолчанию через интерфейс awg0 в таблице 100"       "ip route show table 100 | grep 'default dev awg0'"
+check "Шаг 3/11: Добавляем маршрут в 192.168.2.0/24 через интерфейс wifi24 в таблице 100" "ip route show table 100 | grep '192.168.2.0/24 dev br-wifi24'"
+check "Шаг 3/12: Добавляем маршруты к Telegram через awg0 в таблице main"                 "ip route show table main | grep awg0 | grep '91.105.192.0/23'"
+check "Шаг 3/13: Создаем правило маршрутизации: 192.168.2.0/24 -> таблица 100"            "ip rule show | grep 'from 192.168.2.0/24 lookup 100'"
+check "Шаг 3/14: Добавляем скрипт автозапуска для youtubeUnblock в rc.local"              "nft list chain inet fw4 youtubeUnblock | grep skip_awg"
+check "Шаг 3/15: Заставляем службу Терминал слушать на всех интерфейсах вместо lan"       "netstat -tlnp | grep ttyd | grep '0.0.0.0:7681'"
 SCRIPT
 ```
 
@@ -311,7 +318,7 @@ SCRIPT
 
 1. Подключитесь к `WiFi 2.4 GHz` (**Routerich_2**)
    - Проверьте IP-адрес - должен быть: `192.168.2.x`
-   - Откройте [ifconfig.me](https://ifconfig.me) - должен быть IP-адрес сервера AmneziaWG
+   - Откройте [ifconfig.me](https://ifconfig.me) - должен быть IP-адрес сервера **AmneziaWG**
    - Проверьте работу **[YouTube](https://www.youtube.com/)** и других заблокированных ресурсов, например **[X](https://x.com/)**
 2. Подключитесь к `WiFi 5 GHz` (**Routerich_5**) или `LAN`
    - Проверьте IP-адрес - должен быть: `192.168.1.x`
